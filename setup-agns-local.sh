@@ -973,7 +973,7 @@ cat > site/agns/index.html <<'HTML'
 
       <a href="#home" class="logo">
         <img
-          src="assets/agns-logo.webp"
+          src="assets/agns-logo-nav.webp"
           alt="AGNS XSTREAM FIBERNET"
           onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
         >
@@ -1571,7 +1571,7 @@ cat > site/agns/index.html <<'HTML'
         <a href="#home" class="logo">
 
           <img
-            src="assets/agns-logo.webp"
+            src="assets/agns-logo-nav.webp"
             alt="AGNS XSTREAM FIBERNET"
             onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
           >
@@ -1616,7 +1616,7 @@ echo "PASS: AGNS website source created"
 
 log "5. Find official AGNS logo"
 
-LOGO_TARGET="${ROOT}/site/agns/assets/agns-logo.webp"
+LOGO_TARGET="${ROOT}/site/agns/assets/agns-logo-nav.webp"
 
 if [[ -s "${LOGO_TARGET}" ]]; then
   echo "PASS: existing official logo preserved"
@@ -1625,9 +1625,9 @@ else
 
   if [[ -z "${LOGO_SOURCE}" ]]; then
     for candidate in \
-      "${ROOT}/agns-logo.webp" \
-      "${HOME}/Downloads/agns-logo.webp" \
-      "${HOME}/Desktop/agns-logo.webp"
+      "${ROOT}/agns-logo-nav.webp" \
+      "${HOME}/Downloads/agns-logo-nav.webp" \
+      "${HOME}/Desktop/agns-logo-nav.webp"
     do
       if [[ -s "${candidate}" ]]; then
         LOGO_SOURCE="${candidate}"
@@ -1654,7 +1654,7 @@ else
     echo "  ${LOGO_TARGET}"
     echo
     echo "Or rerun with:"
-    echo "  AGNS_LOGO=/full/path/to/agns-logo.webp ./setup-agns-local.sh"
+    echo "  AGNS_LOGO=/full/path/to/agns-logo-nav.webp ./setup-agns-local.sh"
   fi
 fi
 
@@ -1957,7 +1957,7 @@ echo "  ${ROOT}/site/agns/index.html"
 
 echo
 echo "Official logo location:"
-echo "  ${ROOT}/site/agns/assets/agns-logo.webp"
+echo "  ${ROOT}/site/agns/assets/agns-logo-nav.webp"
 
 echo
 echo "Docker status:"

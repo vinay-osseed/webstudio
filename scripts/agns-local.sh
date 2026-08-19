@@ -37,6 +37,75 @@ start_preview() {
     >/dev/null
 }
 
+resolve_agns_project_id() {
+  local password
+  local rows
+
+  password="$(
+    sed -n 's/^POSTGRES_PASSWORD=//p' .env \
+      | tail -1
+  )"
+
+  [[ -n "${password}" ]] || {
+    echo "ERROR: POSTGRES_PASSWORD is missing from .env." >&2
+    return 1
+  }
+
+  rows="$(mktemp -t agns-projects.XXXXXX)"
+
+  compose exec \
+    -T \
+    -e "PGPASSWORD=${password}" \
+    db \
+    psql \
+    -U postgres \
+    -d webstudio \
+    -tA \
+    -c 'SELECT row_to_json(p)::text FROM "Project" p;' \
+    > "${rows}"
+
+  PROJECT_ROWS="${rows}" python3 - <<'PYPROJECT'
+from pathlib import Path
+import json
+import os
+
+wanted = "AGNS XSTREAM FIBERNET"
+matches = []
+
+for raw in Path(os.environ["PROJECT_ROWS"]).read_text().splitlines():
+    raw = raw.strip()
+    if not raw:
+        continue
+
+    row = json.loads(raw)
+
+    strings = [
+        value.strip()
+        for value in row.values()
+        if isinstance(value, str)
+    ]
+
+    if wanted in strings:
+        matches.append(row)
+
+if len(matches) != 1:
+    raise SystemExit(
+        f"Expected exactly one {wanted!r} project; found {len(matches)}."
+    )
+
+value = matches[0].get("id")
+
+if not isinstance(value, str) or not value:
+    raise SystemExit("Matched project has no usable id.")
+
+print(value)
+PYPROJECT
+
+  local status=$?
+  rm -f "${rows}"
+  return "${status}"
+}
+
 case "${1:-status}" in
 
   start)
@@ -64,9 +133,23 @@ case "${1:-status}" in
     ;;
 
   build)
-    compose up -d
+    compose up -d \
+      postgrest \
+      app \
+      local-proxy \
+      publisher
 
-    node \
+    AGNS_PROJECT_ID="$(
+      resolve_agns_project_id
+    )"
+
+    [[ -n "${AGNS_PROJECT_ID}" ]] || {
+      echo "ERROR: AGNS project ID could not be resolved." >&2
+      exit 1
+    }
+
+    AGNS_PROJECT_ID="${AGNS_PROJECT_ID}" \
+      node \
       scripts/automation/agns-local-import.mjs
     ;;
 
@@ -107,14 +190,33 @@ case "${1:-status}" in
     ;;
 
   project-url)
-    if [[ -s .local/agns-local-project-url.txt ]]; then
-      cat \
-        .local/agns-local-project-url.txt
-    fi
+    AGNS_PROJECT_ID="$(
+      resolve_agns_project_id
+    )"
+
+    [[ -n "${AGNS_PROJECT_ID}" ]] || {
+      echo "ERROR: AGNS project ID could not be resolved." >&2
+      exit 1
+    }
+
+    echo "https://p-${AGNS_PROJECT_ID}.webstudio.localhost/"
     ;;
 
   preview-url)
     echo "${PREVIEW_URL}"
+    ;;
+
+  home)
+    AGNS_PROJECT_ID="$(
+      resolve_agns_project_id
+    )"
+
+    [[ -n "${AGNS_PROJECT_ID}" ]] || {
+      echo "ERROR: AGNS project ID could not be resolved." >&2
+      exit 1
+    }
+
+    open "https://p-${AGNS_PROJECT_ID}.webstudio.localhost/"
     ;;
 
   secret)
@@ -124,14 +226,16 @@ case "${1:-status}" in
     ;;
 
   open)
-    open "${BUILDER_URL}"
+    AGNS_PROJECT_ID="$(
+      resolve_agns_project_id
+    )"
 
-    if [[ -s .local/agns-local-project-url.txt ]]; then
-      open "$(
-        cat \
-          .local/agns-local-project-url.txt
-      )"
-    fi
+    [[ -n "${AGNS_PROJECT_ID}" ]] || {
+      echo "ERROR: AGNS project ID could not be resolved." >&2
+      exit 1
+    }
+
+    open "https://p-${AGNS_PROJECT_ID}.webstudio.localhost/"
     ;;
 
   *)
@@ -145,6 +249,7 @@ case "${1:-status}" in
     echo "  ./scripts/agns-local.sh url"
     echo "  ./scripts/agns-local.sh project-url"
     echo "  ./scripts/agns-local.sh preview-url"
+    echo "  ./scripts/agns-local.sh home"
     echo "  ./scripts/agns-local.sh secret"
     echo "  ./scripts/agns-local.sh open"
     exit 1

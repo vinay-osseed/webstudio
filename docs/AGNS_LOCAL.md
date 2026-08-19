@@ -52,7 +52,7 @@ Do not recreate the AGNS logo.
 When the original logo is available, place it at:
 
 ```text
-site/agns/assets/agns-logo.webp
+site/agns/assets/agns-logo-nav.webp
 ```
 
 Then upload/use that original asset from Webstudio's Assets panel.

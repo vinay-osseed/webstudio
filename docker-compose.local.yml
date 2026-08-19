@@ -1,21 +1,37 @@
 services:
-
   app:
+    depends_on:
+      postgrest:
+        condition: service_started
+
     environment:
-      APP_FQDN: ${APP_FQDN:-webstudio.localhost}
       DEPLOYMENT_URL: ${DEPLOYMENT_URL:-https://webstudio.localhost}
+      NODE_EXTRA_CA_CERTS: /etc/webstudio-local-ca/rootCA.pem
+
+    # .localhost resolves to loopback. The TLS proxy below shares this exact
+    # network namespace, so Webstudio's server-side OAuth token exchange can
+    # safely call its own public HTTPS origin.
+    extra_hosts:
+      - "webstudio.localhost:127.0.0.1"
+
+    # docker-compose.yml already publishes port 3000. This adds trusted HTTPS.
+    ports:
+      - "127.0.0.1:443:443"
+
+    volumes:
+      - ./.local/certs/rootCA.pem:/etc/webstudio-local-ca/rootCA.pem:ro
 
   local-proxy:
-    image: nginx:alpine
-
+    image: nginx:1.31.3-alpine
     restart: unless-stopped
+
+    # Share app's network namespace. Nginx can then proxy 443 -> 127.0.0.1:3000,
+    # and the Builder itself can reach the exact same HTTPS listener.
+    network_mode: "service:app"
 
     depends_on:
       app:
         condition: service_healthy
-
-    ports:
-      - "127.0.0.1:443:443"
 
     volumes:
       - ./nginx/webstudio-local.conf:/etc/nginx/conf.d/default.conf:ro

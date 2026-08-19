@@ -232,7 +232,7 @@ const logoPath =
     "site",
     "agns",
     "assets",
-    "agns-logo.webp"
+    "agns-logo-nav.webp"
   );
 
 let logoData = "";
@@ -257,7 +257,7 @@ let html =
 if (logoData) {
   html =
     html.replaceAll(
-      "assets/agns-logo.webp",
+      "assets/agns-logo-nav.webp",
       `data:image/webp;base64,${logoData}`
     );
 }
