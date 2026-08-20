@@ -129,7 +129,33 @@ services:
       PGRST_DB_URI: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/webstudio
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+      TRPC_SERVER_API_TOKEN: ${TRPC_SERVER_API_TOKEN}
+      PUBLISHER_HOST: ${PUBLISHER_HOST:-webstudio.agnsbroadband.in}
+      SELF_HOSTED_PUBLISHER_URL: http://publisher:4000
       PGRST_DB_SCHEMAS: public
+
+  # Self-hosted Webstudio publisher.
+  # The Builder calls port 4000 internally. Nothing is exposed publicly here;
+  # the public AGNS site is exported separately and hosted elsewhere.
+  publisher:
+    image: ${PUBLISHER_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      TRPC_SERVER_API_TOKEN: ${TRPC_SERVER_API_TOKEN}
+      PUBLISHER_HOST: ${PUBLISHER_HOST:-webstudio.agnsbroadband.in}
+      BUILDER_INTERNAL_URL: http://app:3000
+      PROXY_PORT: "4001"
+    volumes:
+      - published-sites:/var/publish
+      - publisher-work:/var/work
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   app:
     image: ${BUILDER_IMAGE:-ghcr.io/webstudio-community/builder:latest}
@@ -210,3 +236,7 @@ volumes:
     name: agns-webstudio-caddy-data
   caddy-config:
     name: agns-webstudio-caddy-config
+  published-sites:
+    name: agns-webstudio-published-sites
+  publisher-work:
+    name: agns-webstudio-publisher-work

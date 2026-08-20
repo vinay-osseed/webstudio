@@ -5,3 +5,7 @@
 .env.production
 exports/
 prod-state/
+backups/
+/agns-webstudio-state-*.tar.gz
+/agns-prod-*-fix*.sh
+/agns-prod-transfer-project-owner*.sh
