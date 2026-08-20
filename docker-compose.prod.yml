@@ -1,7 +1,10 @@
 name: agns-webstudio-prod
 
 services:
+  # Optional edge stack retained for reference/alternate deployments.
+  # It is disabled by default on this VPS because host Nginx already owns 80/443.
   caddy:
+    profiles: ["caddy-edge"]
     image: ${CADDY_IMAGE:-caddy:2.10.2-alpine}
     restart: unless-stopped
     depends_on:
@@ -20,6 +23,7 @@ services:
       - caddy-config:/config
 
   tls-ask:
+    profiles: ["caddy-edge"]
     image: ${NGINX_IMAGE:-nginx:1.29-alpine}
     restart: unless-stopped
     expose:
@@ -137,13 +141,23 @@ services:
         condition: service_completed_successfully
       postgrest:
         condition: service_started
-    expose:
-      - "3000"
+
+    # The VPS already runs host Nginx on ports 80/443.
+    # Bind Builder only to loopback so it is never directly public.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    # Make Webstudio's server-side OAuth callback reach host Nginx
+    # without relying on public-IP hairpin NAT.
+    extra_hosts:
+      - "webstudio.agnsbroadband.in:host-gateway"
+
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10
+
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -170,6 +184,7 @@ services:
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       S3_BUCKET: ${S3_BUCKET:-webstudio-assets}
+
     volumes:
       - uploads:/app/public/s/uploads
 

@@ -8,4 +8,4 @@ exec docker compose \
   --env-file .env.production \
   -f docker-compose.prod.yml \
   logs -f --tail=200 \
-  caddy app postgrest db minio
+  app postgrest db minio

@@ -47,32 +47,23 @@ set +a
 if [[ "${BUILDER_IMAGE}" != *@sha256:* ]]; then
   echo "Production images are not pinned yet. Pinning them now..."
   ./scripts/prod/pin-images.sh
+
   set -a
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
   set +a
 fi
 
-printf '%s\n' \
-  "DNS required before HTTPS can succeed:" \
-  "  A  webstudio.agnsbroadband.in    -> VPS IPv4" \
-  "  A  *.webstudio.agnsbroadband.in  -> VPS IPv4" \
-  "Do not point agnsbroadband.in at this VPS; the public site is hosted separately."
+echo "Production edge: existing VPS Nginx + Certbot."
+echo "Caddy is disabled by the caddy-edge Compose profile."
+echo
 
 if command -v getent >/dev/null 2>&1; then
-  echo
   echo "Current DNS resolution:"
   getent ahostsv4 webstudio.agnsbroadband.in | head -3 || true
   getent ahostsv4 test.webstudio.agnsbroadband.in | head -3 || true
+  echo
 fi
-
-docker run --rm \
-  -e "ACME_EMAIL=${ACME_EMAIL}" \
-  -v "${ROOT}/deploy/prod/Caddyfile:/etc/caddy/Caddyfile:ro" \
-  "${CADDY_IMAGE}" \
-  caddy validate \
-    --config /etc/caddy/Caddyfile \
-    --adapter caddyfile
 
 if [[ -n "${STATE_BUNDLE}" ]]; then
   ./scripts/prod/import-state.sh "${STATE_BUNDLE}"
@@ -89,6 +80,7 @@ else
 fi
 
 ready=0
+
 for _ in $(seq 1 90); do
   if docker compose \
     --env-file "${ENV_FILE}" \
@@ -99,6 +91,7 @@ for _ in $(seq 1 90); do
     ready=1
     break
   fi
+
   sleep 2
 done
 
@@ -106,21 +99,26 @@ done
   docker compose \
     --env-file "${ENV_FILE}" \
     -f "${COMPOSE_FILE}" \
-    logs --tail=200 app postgrest db caddy
+    logs --tail=200 app postgrest db minio
+
   echo "ERROR: Builder did not become healthy." >&2
   exit 1
 }
 
 echo "PASS: Builder container is healthy."
 
-if curl -fsS --max-time 20 https://webstudio.agnsbroadband.in/health | grep -qi '^ok$'; then
-  echo "PASS: public HTTPS builder is healthy."
+if curl -fsS --max-time 5 http://127.0.0.1:3000/health | grep -qi '^ok$'; then
+  echo "PASS: Builder is bound to host loopback on 127.0.0.1:3000."
 else
-  echo "WARNING: internal Builder is healthy, but public HTTPS is not ready yet."
-  echo "Check DNS for webstudio.agnsbroadband.in and ports 80/443 on the VPS firewall."
+  echo "ERROR: Builder is not reachable on host loopback." >&2
+  exit 1
 fi
 
 echo
-echo "Builder: https://webstudio.agnsbroadband.in"
-echo "Google callback: https://webstudio.agnsbroadband.in/auth/google/callback"
-echo "Project canvases: https://p-<project-id>.webstudio.agnsbroadband.in"
+echo "Next:"
+echo "  ./scripts/prod/configure-host-nginx.sh"
+echo
+echo "Builder after Nginx/Certbot:"
+echo "  https://webstudio.agnsbroadband.in"
+echo "Google callback:"
+echo "  https://webstudio.agnsbroadband.in/auth/google/callback"
