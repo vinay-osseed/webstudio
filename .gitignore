@@ -2,3 +2,6 @@
 .env.backup-*
 .local/
 .DS_Store
+.env.production
+exports/
+prod-state/

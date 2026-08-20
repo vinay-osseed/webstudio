@@ -357,3 +357,14 @@ Each apex domain is independent: multiple projects can each have their own apex 
 
 - [webstudio-fork](https://github.com/webstudio-community/webstudio-fork): builder with self-hosting patches, Docker image CI
 - [webstudio-publisher](https://github.com/webstudio-community/webstudio-publisher): publisher service source and Docker image CI
+
+---
+
+## AGNS production deployment
+
+The AGNS-specific production deployment keeps the Builder on
+`webstudio.agnsbroadband.in` while the public `agnsbroadband.in` site is hosted
+separately as a static export.
+
+See [`docs/AGNS_PRODUCTION.md`](docs/AGNS_PRODUCTION.md) and use
+`docker-compose.prod.yml` plus `scripts/prod/`.

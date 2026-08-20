@@ -1,0 +1,30 @@
+{
+  email {$ACME_EMAIL}
+  admin off
+
+  on_demand_tls {
+    permission http http://tls-ask:8080/
+  }
+}
+
+webstudio.agnsbroadband.in {
+  encode zstd gzip
+  reverse_proxy app:3000
+}
+
+https:// {
+  tls {
+    on_demand
+  }
+
+  @project host_regexp project ^p-[0-9a-f-]+[.]webstudio[.]agnsbroadband[.]in$
+
+  handle @project {
+    encode zstd gzip
+    reverse_proxy app:3000
+  }
+
+  handle {
+    respond "Not found" 404
+  }
+}
