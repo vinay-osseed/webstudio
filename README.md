@@ -241,6 +241,8 @@ DEV_LOGIN_EMAIL=admin@example.com
 
 The password is the value of `AUTH_SECRET` (visible in Coolify under the service's environment variables).
 
+Also set `DEPLOYMENT_URL` in your `.env` (plain Compose — Coolify sets it automatically): the compose file always passes the variable through, and the app refuses to start if it's empty. With Coolify this is set automatically from `SERVICE_URL_APP`; with plain Compose, set it to your builder's URL (e.g. `http://localhost:3000` for local testing, see [Testing locally over plain HTTP](#testing-locally-over-plain-http)).
+
 ### Option B: GitHub OAuth
 
 1. Go to **github.com → Settings → Developer Settings → OAuth Apps → New OAuth App**
@@ -273,6 +275,20 @@ DEPLOYMENT_URL=https://webstudio.your-domain.com
 ```
 
 > With Coolify: `DEPLOYMENT_URL` is automatically set from `SERVICE_URL_APP` by the compose file — no need to add it manually.
+
+### Testing locally over plain HTTP
+
+Session cookies use the `__Host-` prefix, which requires HTTPS. If you're running `docker-compose.yml` on your own machine (`http://localhost`, no reverse proxy/TLS in front), browsers silently refuse to set these cookies — both dev login and OAuth fail (OAuth shows "Missing state on session"). To test locally over plain HTTP, set in `.env`:
+
+```env
+DEPLOYMENT_ENVIRONMENT=development
+DEPLOYMENT_URL=http://localhost:3000
+ALLOW_INSECURE_COOKIES=true
+```
+
+`DEPLOYMENT_URL` is required here too, even for dev login: the compose file always passes it through, and the app refuses to start on an empty value.
+
+Never set `DEPLOYMENT_ENVIRONMENT`/`ALLOW_INSECURE_COOKIES` like this on a real deployment — `ALLOW_INSECURE_COOKIES` is refused at startup when `DEPLOYMENT_ENVIRONMENT=production` (the default).
 
 ---
 
@@ -320,7 +336,8 @@ Each apex domain is independent: multiple projects can each have their own apex 
 | `GH_CLIENT_ID` / `GH_CLIENT_SECRET` | - | - | GitHub OAuth |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | - | - | Google OAuth |
 | `DEPLOYMENT_URL` | ✅ | - | Builder's public URL with protocol (e.g. `https://webstudio.your-domain.com`). Required in production for all login modes. Auto-set from `SERVICE_URL_APP` in Coolify. |
-| `DEPLOYMENT_ENVIRONMENT` | - | - | Set to `production` automatically by both compose files. |
+| `DEPLOYMENT_ENVIRONMENT` | - | `production` | Set to `production` automatically by both compose files. Override to `development` in `.env` (plain Compose only) for local HTTP testing. |
+| `ALLOW_INSECURE_COOKIES` | - | - | `true` = drop the `__Host-`/`Secure` cookie requirements, for local testing over plain HTTP. Refused when `DEPLOYMENT_ENVIRONMENT=production`. Never use on a real deployment. |
 | `AUTH_WS_CLIENT_ID` | ✅ (prod) | - | OAuth server credential for the webstudio CLI. Any non-empty value. Auto-set in Coolify. |
 | `AUTH_WS_CLIENT_SECRET` | ✅ (prod) | - | OAuth server secret for the webstudio CLI. Any strong random value. Auto-set in Coolify. |
 | `PUBLISHER_HOST` | - | `wstd.work` | Domain suffix for published project URLs |
