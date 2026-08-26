@@ -9,3 +9,6 @@ backups/
 /agns-webstudio-state-*.tar.gz
 /agns-prod-*-fix*.sh
 /agns-prod-transfer-project-owner*.sh
+
+# Local Webstudio CLI session and credentials.
+/.webstudio/
